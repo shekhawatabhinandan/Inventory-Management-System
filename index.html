@@ -4,13 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory Management System</title>
-    <link rel="stylesheet" href="styles.css">
+
+    <!-- Styles & Fonts -->
+    <link rel="stylesheet" href="styles.css">  <!-- Might refactor later into /assets/css -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js for dashboard analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
-    <!-- Login Screen -->
+
+    <!-- Login Section -->
     <div id="loginScreen" class="login-container">
         <div class="login-card">
             <div class="login-header">
@@ -18,17 +24,22 @@
                 <h1>Inventory Management</h1>
                 <p>Select your role to continue</p>
             </div>
+
+            <!-- Role buttons -->
             <div class="role-selection">
                 <button class="role-btn manager" onclick="showLogin('manager')">
                     <i class="fas fa-user-tie"></i>
                     <span>Manager</span>
                 </button>
+
                 <button class="role-btn warehouse" onclick="showLogin('warehouse')">
                     <i class="fas fa-boxes"></i>
                     <span>Warehouse</span>
                 </button>
             </div>
-            <div id="loginForm" class="login-form" style="display: none;">
+
+            <!-- Actual login form (hidden by default) -->
+            <div id="loginForm" class="login-form" style="display:none;">
                 <div class="form-group">
                     <input type="text" id="username" placeholder="Username" required>
                 </div>
@@ -41,9 +52,10 @@
         </div>
     </div>
 
-    <!-- Dashboard -->
-    <div id="dashboard" class="dashboard" style="display: none;">
-        <!-- Header -->
+    <!-- Dashboard Section -->
+    <div id="dashboard" class="dashboard" style="display:none;">
+        
+        <!-- Header Bar -->
         <header class="dashboard-header">
             <div class="header-left">
                 <i class="fas fa-warehouse"></i>
@@ -57,44 +69,41 @@
             </div>
         </header>
 
-        <!-- Main Content -->
+        <!-- Main dashboard content -->
         <main class="dashboard-main">
-            <!-- Stats Cards -->
+
+            <!-- Summary Stats -->
             <section class="stats-section">
+                <!-- Might later loop through these dynamically -->
                 <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-boxes"></i>
-                    </div>
+                    <div class="stat-icon"><i class="fas fa-boxes"></i></div>
                     <div class="stat-content">
                         <h3>Total Stock</h3>
                         <p class="stat-number" id="totalStock">1,247</p>
                         <span class="stat-change positive">+12%</span>
                     </div>
                 </div>
+
                 <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-shipping-fast"></i>
-                    </div>
+                    <div class="stat-icon"><i class="fas fa-shipping-fast"></i></div>
                     <div class="stat-content">
                         <h3>Orders Today</h3>
                         <p class="stat-number" id="ordersToday">23</p>
                         <span class="stat-change positive">+8%</span>
                     </div>
                 </div>
+
                 <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
+                    <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
                     <div class="stat-content">
                         <h3>Low Stock Items</h3>
                         <p class="stat-number" id="lowStock">7</p>
                         <span class="stat-change negative">-2%</span>
                     </div>
                 </div>
+
                 <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-dollar-sign"></i>
-                    </div>
+                    <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
                     <div class="stat-content">
                         <h3>Total Value</h3>
                         <p class="stat-number" id="totalValue">$45,678</p>
@@ -103,8 +112,9 @@
                 </div>
             </section>
 
-            <!-- Main Dashboard Grid -->
+            <!-- Grid Layout for Dashboard Components -->
             <div class="dashboard-grid">
+                
                 <!-- Live Stock Status -->
                 <div class="dashboard-card stock-status">
                     <div class="card-header">
@@ -117,12 +127,12 @@
                     </div>
                     <div class="card-content">
                         <div class="stock-items" id="stockItems">
-                            <!-- Stock items will be dynamically loaded -->
+                            <!-- Stock items go here -->
                         </div>
                     </div>
                 </div>
 
-                <!-- Daily Stock Entry -->
+                <!-- Daily Stock Entry Form -->
                 <div class="dashboard-card stock-entry">
                     <div class="card-header">
                         <h2><i class="fas fa-plus-circle"></i> Daily Stock Entry</h2>
@@ -139,6 +149,7 @@
                                     <input type="number" id="quantity" required>
                                 </div>
                             </div>
+
                             <div class="form-row">
                                 <div class="form-group">
                                     <label>Category</label>
@@ -156,16 +167,18 @@
                                     <input type="text" id="supplier" required>
                                 </div>
                             </div>
+
                             <div class="form-group">
                                 <label>Notes</label>
-                                <textarea id="notes" rows="3"></textarea>
+                                <textarea id="notes" rows="3" placeholder="Any special remarks..."></textarea>
                             </div>
+
                             <button type="submit" class="submit-btn">Add Stock</button>
                         </form>
                     </div>
                 </div>
 
-                <!-- Order History Chart -->
+                <!-- Order & Supply Trends -->
                 <div class="dashboard-card chart-container">
                     <div class="card-header">
                         <h2><i class="fas fa-chart-line"></i> Order & Supply Trends</h2>
@@ -182,7 +195,7 @@
                     </div>
                 </div>
 
-                <!-- Recent Activity Log -->
+                <!-- Recent Activity -->
                 <div class="dashboard-card activity-log">
                     <div class="card-header">
                         <h2><i class="fas fa-history"></i> Recent Activity</h2>
@@ -192,7 +205,7 @@
                     </div>
                     <div class="card-content">
                         <div class="activity-list" id="activityList">
-                            <!-- Activity items will be dynamically loaded -->
+                            <!-- Activity log goes here -->
                         </div>
                     </div>
                 </div>
@@ -205,26 +218,22 @@
                     <div class="card-content">
                         <div class="action-buttons">
                             <button class="action-btn" onclick="quickAddStock()">
-                                <i class="fas fa-plus"></i>
-                                <span>Quick Add</span>
+                                <i class="fas fa-plus"></i> <span>Quick Add</span>
                             </button>
                             <button class="action-btn" onclick="generateReport()">
-                                <i class="fas fa-file-alt"></i>
-                                <span>Generate Report</span>
+                                <i class="fas fa-file-alt"></i> <span>Generate Report</span>
                             </button>
                             <button class="action-btn" onclick="exportData()">
-                                <i class="fas fa-download"></i>
-                                <span>Export Data</span>
+                                <i class="fas fa-download"></i> <span>Export Data</span>
                             </button>
                             <button class="action-btn" onclick="viewAlerts()">
-                                <i class="fas fa-bell"></i>
-                                <span>View Alerts</span>
+                                <i class="fas fa-bell"></i> <span>View Alerts</span>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Inventory Overview -->
+                <!-- Inventory Overview Table -->
                 <div class="dashboard-card inventory-overview">
                     <div class="card-header">
                         <h2><i class="fas fa-clipboard-list"></i> Inventory Overview</h2>
@@ -242,24 +251,27 @@
                                     </tr>
                                 </thead>
                                 <tbody id="inventoryTableBody">
-                                    <!-- Table rows will be dynamically loaded -->
+                                    <!-- Dynamic table rows loaded via script.js -->
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-            </div>
+
+            </div> <!-- End dashboard-grid -->
         </main>
-    </div>
+    </div> <!-- End dashboard -->
 
     <!-- Modal for Quick Actions -->
-    <div id="modal" class="modal" style="display: none;">
+    <div id="modal" class="modal" style="display:none;">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
             <div id="modalBody"></div>
         </div>
     </div>
 
+    <!-- External JS -->
     <script src="script.js"></script>
+    <!-- Note: might move scripts to bottom of body later if load times get weird -->
 </body>
 </html>
