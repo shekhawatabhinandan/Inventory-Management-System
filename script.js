@@ -4,6 +4,14 @@ let currentRole = null;
 let stockData = [];
 let activityLog = [];
 let orderChart = null;
+let sessionStartTime = null;
+let sessionTimer = null;
+let securityCode = null;
+let loginAttempts = 0;
+let maxLoginAttempts = 3;
+let sessionTimeout = 30 * 60 * 1000; // 30 minutes
+let userActivity = [];
+let isPasswordVisible = false;
 
 // Sample Data
 const sampleStockData = [
@@ -30,63 +38,237 @@ document.addEventListener('DOMContentLoaded', function() {
     stockData = [...sampleStockData];
     activityLog = [...sampleActivityLog];
     loadActivityLog();
+    generateSecurityCode();
+    initializeSessionTimeout();
+    
+    // Check for existing session
+    const savedSession = localStorage.getItem('inventorySession');
+    if (savedSession) {
+        const session = JSON.parse(savedSession);
+        if (session.expires > Date.now()) {
+            currentUser = session.user;
+            currentRole = session.role;
+            sessionStartTime = session.startTime;
+            showDashboard();
+            startSessionTimer();
+        } else {
+            localStorage.removeItem('inventorySession');
+        }
+    }
 });
 
-// Login Functions
-function showLogin(role) {
+// Enhanced Login Functions
+function selectRole(role) {
     currentRole = role;
+    document.getElementById('roleSelection').style.display = 'none';
     document.getElementById('loginForm').style.display = 'block';
-    document.querySelector('.role-selection').style.display = 'none';
     
-    // Update login form based on role
-    const usernameField = document.getElementById('username');
-    const passwordField = document.getElementById('password');
+    // Update form based on role
+    const title = document.getElementById('loginTitle');
+    const subtitle = document.getElementById('loginSubtitle');
     
     if (role === 'manager') {
-        usernameField.placeholder = 'Manager Username';
-        usernameField.value = 'manager';
-        passwordField.value = 'manager123';
+        title.textContent = 'Manager Login';
+        subtitle.textContent = 'Enter your manager credentials to access the system';
     } else if (role === 'warehouse') {
-        usernameField.placeholder = 'Warehouse Username';
-        usernameField.value = 'warehouse';
-        passwordField.value = 'warehouse123';
+        title.textContent = 'Warehouse Login';
+        subtitle.textContent = 'Enter your warehouse credentials to access the system';
+    }
+    
+    // Generate new security code
+    generateSecurityCode();
+}
+
+function goBackToRoles() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('roleSelection').style.display = 'grid';
+    currentRole = null;
+    clearLoginForm();
+}
+
+function clearLoginForm() {
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+    document.getElementById('securityCode').value = '';
+    document.getElementById('rememberMe').checked = false;
+    isPasswordVisible = false;
+    updatePasswordToggle();
+}
+
+function togglePassword() {
+    const passwordField = document.getElementById('password');
+    const toggleIcon = document.querySelector('.password-toggle i');
+    
+    isPasswordVisible = !isPasswordVisible;
+    passwordField.type = isPasswordVisible ? 'text' : 'password';
+    toggleIcon.className = isPasswordVisible ? 'fas fa-eye-slash' : 'fas fa-eye';
+}
+
+function updatePasswordToggle() {
+    const toggleIcon = document.querySelector('.password-toggle i');
+    toggleIcon.className = isPasswordVisible ? 'fas fa-eye-slash' : 'fas fa-eye';
+}
+
+function generateSecurityCode() {
+    securityCode = Math.floor(1000 + Math.random() * 9000).toString();
+    document.getElementById('securityCodeDisplay').textContent = securityCode;
+}
+
+function initializeSessionTimeout() {
+    // Reset session timeout on user activity
+    document.addEventListener('click', resetSessionTimeout);
+    document.addEventListener('keypress', resetSessionTimeout);
+    document.addEventListener('mousemove', resetSessionTimeout);
+}
+
+function resetSessionTimeout() {
+    if (currentUser) {
+        clearTimeout(sessionTimer);
+        sessionTimer = setTimeout(logout, sessionTimeout);
     }
 }
 
-function hideLogin() {
-    document.getElementById('loginForm').style.display = 'none';
-    document.querySelector('.role-selection').style.display = 'flex';
-    currentRole = null;
-}
+// Enhanced Authentication
+document.getElementById('authForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    authenticateUser();
+});
 
-function login() {
+function authenticateUser() {
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
+    const securityCodeInput = document.getElementById('securityCode').value;
+    const rememberMe = document.getElementById('rememberMe').checked;
     
-    // Simple authentication (in real app, this would be server-side)
-    if (currentRole === 'manager' && username === 'manager' && password === 'manager123') {
-        currentUser = { username, role: 'Manager' };
-        showDashboard();
-    } else if (currentRole === 'warehouse' && username === 'warehouse' && password === 'warehouse123') {
-        currentUser = { username, role: 'Warehouse Staff' };
-        showDashboard();
-    } else {
-        alert('Invalid credentials. Try manager/manager123 or warehouse/warehouse123');
+    // Validate security code
+    if (securityCodeInput !== securityCode) {
+        showNotification('Invalid security code. Please try again.', 'error');
+        generateSecurityCode();
+        return;
     }
+    
+    // Check login attempts
+    if (loginAttempts >= maxLoginAttempts) {
+        showNotification('Too many failed attempts. Please try again later.', 'error');
+        return;
+    }
+    
+    // Simulate authentication delay
+    const loginBtn = document.querySelector('.login-btn');
+    const spinner = document.querySelector('.loading-spinner');
+    const btnText = loginBtn.querySelector('span');
+    
+    loginBtn.disabled = true;
+    spinner.style.display = 'block';
+    btnText.textContent = 'Authenticating...';
+    
+    setTimeout(() => {
+        // Enhanced authentication with user data
+        const userDatabase = {
+            'manager': { 
+                password: 'manager123', 
+                role: 'Manager', 
+                permissions: ['all'],
+                fullName: 'John Manager',
+                department: 'Management',
+                lastLogin: null
+            },
+            'warehouse': { 
+                password: 'warehouse123', 
+                role: 'Warehouse Staff', 
+                permissions: ['inventory', 'orders'],
+                fullName: 'Jane Warehouse',
+                department: 'Operations',
+                lastLogin: null
+            }
+        };
+        
+        const user = userDatabase[username];
+        
+        if (user && user.password === password) {
+            // Successful login
+            currentUser = {
+                username,
+                role: user.role,
+                fullName: user.fullName,
+                department: user.department,
+                permissions: user.permissions,
+                loginTime: new Date(),
+                sessionId: generateSessionId()
+            };
+            
+            // Update last login
+            user.lastLogin = new Date();
+            
+            // Save session
+            if (rememberMe) {
+                const session = {
+                    user: currentUser,
+                    role: currentRole,
+                    startTime: Date.now(),
+                    expires: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days
+                };
+                localStorage.setItem('inventorySession', JSON.stringify(session));
+            }
+            
+            loginAttempts = 0;
+            showDashboard();
+            logUserActivity('login', `User ${username} logged in successfully`);
+            
+        } else {
+            // Failed login
+            loginAttempts++;
+            showNotification(`Invalid credentials. ${maxLoginAttempts - loginAttempts} attempts remaining.`, 'error');
+            generateSecurityCode();
+            clearLoginForm();
+        }
+        
+        // Reset button
+        loginBtn.disabled = false;
+        spinner.style.display = 'none';
+        btnText.textContent = 'Secure Login';
+    }, 1500);
+}
+
+function generateSessionId() {
+    return 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
 
 function logout() {
+    if (currentUser) {
+        logUserActivity('logout', `User ${currentUser.username} logged out`);
+    }
+    
+    // Clear session
     currentUser = null;
     currentRole = null;
+    sessionStartTime = null;
+    clearTimeout(sessionTimer);
+    localStorage.removeItem('inventorySession');
+    
+    // Reset UI
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
-    hideLogin();
+    document.getElementById('roleSelection').style.display = 'grid';
+    document.getElementById('loginForm').style.display = 'none';
+    
+    // Clear form
+    clearLoginForm();
+    
+    showNotification('You have been logged out successfully', 'info');
 }
 
 function showDashboard() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
+    
+    // Update user info
+    document.getElementById('userName').textContent = currentUser.fullName;
     document.getElementById('userRole').textContent = currentUser.role;
+    
+    // Initialize session timer
+    sessionStartTime = new Date();
+    startSessionTimer();
     
     // Initialize dashboard components
     loadStockStatus();
@@ -96,6 +278,157 @@ function showDashboard() {
     
     // Add login activity
     addActivity(`Logged in as ${currentUser.role}`, 'fas fa-sign-in-alt');
+    
+    showNotification(`Welcome back, ${currentUser.fullName}!`, 'success');
+}
+
+function startSessionTimer() {
+    if (sessionTimer) clearInterval(sessionTimer);
+    
+    sessionTimer = setInterval(() => {
+        if (sessionStartTime) {
+            const elapsed = Math.floor((new Date() - sessionStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('sessionTime').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+    }, 1000);
+}
+
+// User Activity Tracking
+function logUserActivity(action, description) {
+    const activity = {
+        id: Date.now(),
+        userId: currentUser ? currentUser.username : 'anonymous',
+        userRole: currentUser ? currentUser.role : 'unknown',
+        action: action,
+        description: description,
+        timestamp: new Date(),
+        sessionId: currentUser ? currentUser.sessionId : null,
+        ipAddress: '127.0.0.1', // In real app, get from server
+        userAgent: navigator.userAgent
+    };
+    
+    userActivity.push(activity);
+    
+    // Keep only last 100 activities
+    if (userActivity.length > 100) {
+        userActivity = userActivity.slice(-100);
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('userActivity', JSON.stringify(userActivity));
+}
+
+// User Menu Functions
+function toggleUserMenu() {
+    const dropdown = document.getElementById('userDropdown');
+    dropdown.classList.toggle('show');
+}
+
+function viewProfile() {
+    showModal('User Profile', `
+        <div class="profile-info">
+            <div class="profile-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="profile-details">
+                <h3>${currentUser.fullName}</h3>
+                <p><strong>Role:</strong> ${currentUser.role}</p>
+                <p><strong>Department:</strong> ${currentUser.department}</p>
+                <p><strong>Username:</strong> ${currentUser.username}</p>
+                <p><strong>Session ID:</strong> ${currentUser.sessionId}</p>
+                <p><strong>Login Time:</strong> ${currentUser.loginTime.toLocaleString()}</p>
+                <p><strong>Permissions:</strong> ${currentUser.permissions.join(', ')}</p>
+            </div>
+        </div>
+    `);
+    toggleUserMenu();
+}
+
+function viewActivity() {
+    const userActivities = userActivity.filter(activity => 
+        activity.userId === currentUser.username
+    );
+    
+    const activityHtml = userActivities.length > 0 ? 
+        userActivities.slice(-10).reverse().map(activity => `
+            <div class="activity-item">
+                <div class="activity-icon">
+                    <i class="fas fa-${getActivityIcon(activity.action)}"></i>
+                </div>
+                <div class="activity-content">
+                    <h4>${activity.description}</h4>
+                    <p>${activity.action.toUpperCase()}</p>
+                </div>
+                <div class="activity-time">
+                    ${formatTime(activity.timestamp)}
+                </div>
+            </div>
+        `).join('') : 
+        '<p>No activity recorded yet.</p>';
+    
+    showModal('My Activity', `<div class="activity-list">${activityHtml}</div>`);
+    toggleUserMenu();
+}
+
+function changePassword() {
+    showModal('Change Password', `
+        <form id="changePasswordForm">
+            <div class="form-group">
+                <label>Current Password</label>
+                <input type="password" id="currentPassword" required>
+            </div>
+            <div class="form-group">
+                <label>New Password</label>
+                <input type="password" id="newPassword" required>
+            </div>
+            <div class="form-group">
+                <label>Confirm New Password</label>
+                <input type="password" id="confirmPassword" required>
+            </div>
+            <button type="submit" class="submit-btn">Change Password</button>
+        </form>
+    `);
+    
+    document.getElementById('changePasswordForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const currentPass = document.getElementById('currentPassword').value;
+        const newPass = document.getElementById('newPassword').value;
+        const confirmPass = document.getElementById('confirmPassword').value;
+        
+        if (newPass !== confirmPass) {
+            showNotification('New passwords do not match', 'error');
+            return;
+        }
+        
+        if (newPass.length < 6) {
+            showNotification('Password must be at least 6 characters', 'error');
+            return;
+        }
+        
+        // In real app, this would be sent to server
+        showNotification('Password changed successfully!', 'success');
+        closeModal();
+        logUserActivity('password_change', 'User changed their password');
+    });
+    
+    toggleUserMenu();
+}
+
+function getActivityIcon(action) {
+    const icons = {
+        'login': 'sign-in-alt',
+        'logout': 'sign-out-alt',
+        'stock_add': 'plus',
+        'stock_remove': 'minus',
+        'stock_edit': 'edit',
+        'password_change': 'key',
+        'report_generate': 'file-alt',
+        'data_export': 'download'
+    };
+    return icons[action] || 'circle';
 }
 
 // Stock Management Functions
@@ -186,7 +519,11 @@ document.getElementById('stockEntryForm').addEventListener('submit', function(e)
         category: category,
         quantity: quantity,
         threshold: Math.ceil(quantity * 0.2), // 20% of quantity as threshold
-        status: quantity > 0 ? 'in-stock' : 'out-of-stock'
+        status: quantity > 0 ? 'in-stock' : 'out-of-stock',
+        addedBy: currentUser.username,
+        addedAt: new Date(),
+        supplier: supplier,
+        notes: notes
     };
     
     stockData.push(newItem);
@@ -201,6 +538,9 @@ document.getElementById('stockEntryForm').addEventListener('submit', function(e)
     
     // Add activity
     addActivity(`Added ${quantity} units of ${productName}`, 'fas fa-plus');
+    
+    // Log user activity
+    logUserActivity('stock_add', `Added ${quantity} units of ${productName} (${category})`);
     
     // Show success message
     showNotification('Stock added successfully!', 'success');
@@ -388,9 +728,13 @@ function quickAddStock() {
 function generateReport() {
     showNotification('Generating report...', 'info');
     
+    // Log user activity
+    logUserActivity('report_generate', 'Generated inventory report');
+    
     setTimeout(() => {
         const report = `
             Inventory Report - ${new Date().toLocaleDateString()}
+            Generated by: ${currentUser.fullName} (${currentUser.role})
             
             Total Items: ${stockData.length}
             Total Stock: ${stockData.reduce((sum, item) => sum + item.quantity, 0)}
@@ -400,6 +744,11 @@ function generateReport() {
             Categories:
             ${[...new Set(stockData.map(item => item.category))].map(cat => 
                 `- ${cat}: ${stockData.filter(item => item.category === cat).length} items`
+            ).join('\n')}
+            
+            Recent Activity:
+            ${userActivity.slice(-5).map(activity => 
+                `- ${activity.description} (${formatTime(activity.timestamp)})`
             ).join('\n')}
         `;
         
@@ -411,8 +760,14 @@ function exportData() {
     const data = {
         stockData: stockData,
         activityLog: activityLog,
-        generatedAt: new Date().toISOString()
+        userActivity: userActivity,
+        generatedAt: new Date().toISOString(),
+        generatedBy: currentUser.username,
+        userRole: currentUser.role
     };
+    
+    // Log user activity
+    logUserActivity('data_export', 'Exported inventory data');
     
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -490,15 +845,24 @@ function editStock(id) {
         const quantity = parseInt(document.getElementById('editQuantity').value);
         const category = document.getElementById('editCategory').value;
         
+        const oldQuantity = item.quantity;
+        const oldName = item.name;
+        
         item.name = name;
         item.quantity = quantity;
         item.category = category;
         item.status = quantity > item.threshold ? 'in-stock' : (quantity === 0 ? 'out-of-stock' : 'low-stock');
+        item.lastModifiedBy = currentUser.username;
+        item.lastModifiedAt = new Date();
         
         loadStockStatus();
         loadInventoryTable();
         updateStats();
         addActivity(`Updated ${name} to ${quantity} units`, 'fas fa-edit');
+        
+        // Log user activity
+        logUserActivity('stock_edit', `Updated ${oldName} (${oldQuantity} → ${quantity} units)`);
+        
         closeModal();
         showNotification('Stock updated successfully!', 'success');
     });
@@ -513,6 +877,10 @@ function deleteStock(id) {
         loadInventoryTable();
         updateStats();
         addActivity(`Deleted ${item.name}`, 'fas fa-trash');
+        
+        // Log user activity
+        logUserActivity('stock_delete', `Deleted ${item.name} (${item.quantity} units)`);
+        
         showNotification('Stock item deleted!', 'success');
     }
 }
@@ -638,3 +1006,4 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
