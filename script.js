@@ -12,6 +12,7 @@ let maxLoginAttempts = 3;
 let sessionTimeout = 30 * 60 * 1000; // 30 minutes
 let userActivity = [];
 let isPasswordVisible = false;
+let currentTheme = 'light';
 
 // Sample Data
 const sampleStockData = [
@@ -40,6 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadActivityLog();
     generateSecurityCode();
     initializeSessionTimeout();
+    initializeTheme();
     
     // Check for existing session
     const savedSession = localStorage.getItem('inventorySession');
@@ -431,6 +433,183 @@ function getActivityIcon(action) {
     return icons[action] || 'circle';
 }
 
+// Theme Management Functions
+function initializeTheme() {
+    // Check for saved theme preference
+    const savedTheme = localStorage.getItem('inventoryTheme');
+    if (savedTheme) {
+        currentTheme = savedTheme;
+        applyTheme(currentTheme);
+    } else {
+        // Check system preference
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        currentTheme = prefersDark ? 'dark' : 'light';
+        applyTheme(currentTheme);
+    }
+    
+    // Listen for system theme changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        if (!localStorage.getItem('inventoryTheme')) {
+            currentTheme = e.matches ? 'dark' : 'light';
+            applyTheme(currentTheme);
+        }
+    });
+}
+
+function toggleTheme() {
+    currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+    applyTheme(currentTheme);
+    
+    // Save theme preference
+    localStorage.setItem('inventoryTheme', currentTheme);
+    
+    // Log user activity
+    if (currentUser) {
+        logUserActivity('theme_change', `Switched to ${currentTheme} theme`);
+    }
+    
+    // Show notification
+    showNotification(`Switched to ${currentTheme} theme`, 'info');
+}
+
+function applyTheme(theme) {
+    const body = document.body;
+    const themeIcon = document.getElementById('themeIcon');
+    
+    // Remove existing theme classes
+    body.removeAttribute('data-theme');
+    
+    // Apply new theme
+    body.setAttribute('data-theme', theme);
+    
+    // Update theme icon
+    if (themeIcon) {
+        themeIcon.className = theme === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+    }
+    
+    // Update theme button styling
+    const themeBtn = document.getElementById('themeToggle');
+    if (themeBtn) {
+        if (theme === 'dark') {
+            themeBtn.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+            themeBtn.style.boxShadow = '0 4px 15px rgba(240, 147, 251, 0.3)';
+        } else {
+            themeBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            themeBtn.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)';
+        }
+    }
+    
+    // Update chart colors if chart exists
+    if (orderChart) {
+        updateChartTheme(orderChart, theme);
+    }
+}
+
+function updateChartTheme(chart, theme) {
+    const isDark = theme === 'dark';
+    
+    // Update chart colors
+    chart.options.scales.y.grid.color = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    chart.options.scales.x.grid.display = false;
+    
+    // Update dataset colors
+    chart.data.datasets.forEach((dataset, index) => {
+        if (index === 0) {
+            dataset.borderColor = isDark ? '#667eea' : '#667eea';
+            dataset.backgroundColor = isDark ? 'rgba(102, 126, 234, 0.1)' : 'rgba(102, 126, 234, 0.1)';
+        } else {
+            dataset.borderColor = isDark ? '#48bb78' : '#48bb78';
+            dataset.backgroundColor = isDark ? 'rgba(72, 187, 120, 0.1)' : 'rgba(72, 187, 120, 0.1)';
+        }
+    });
+    
+    chart.update();
+}
+
+// Enhanced chart initialization with theme support
+function initializeChart() {
+    const ctx = document.getElementById('orderChart').getContext('2d');
+    
+    // Generate sample data for the last 30 days
+    const labels = [];
+    const ordersData = [];
+    const supplyData = [];
+    
+    for (let i = 29; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        
+        // Generate random data
+        ordersData.push(Math.floor(Math.random() * 20) + 5);
+        supplyData.push(Math.floor(Math.random() * 15) + 3);
+    }
+    
+    const isDark = currentTheme === 'dark';
+    
+    orderChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Orders',
+                    data: ordersData,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Supply',
+                    data: supplyData,
+                    borderColor: '#48bb78',
+                    backgroundColor: 'rgba(72, 187, 120, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        color: isDark ? '#ffffff' : '#333333'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                    },
+                    ticks: {
+                        color: isDark ? '#b0b0b0' : '#666666'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: isDark ? '#b0b0b0' : '#666666'
+                    }
+                }
+            },
+            elements: {
+                point: {
+                    radius: 4,
+                    hoverRadius: 6
+                }
+            }
+        }
+    });
+}
+
 // Stock Management Functions
 function loadStockStatus() {
     const stockItemsContainer = document.getElementById('stockItems');
@@ -593,78 +772,7 @@ function clearActivityLog() {
     showNotification('Activity log cleared', 'info');
 }
 
-// Chart Functions
-function initializeChart() {
-    const ctx = document.getElementById('orderChart').getContext('2d');
-    
-    // Generate sample data for the last 30 days
-    const labels = [];
-    const ordersData = [];
-    const supplyData = [];
-    
-    for (let i = 29; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-        
-        // Generate random data
-        ordersData.push(Math.floor(Math.random() * 20) + 5);
-        supplyData.push(Math.floor(Math.random() * 15) + 3);
-    }
-    
-    orderChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Orders',
-                    data: ordersData,
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                },
-                {
-                    label: 'Supply',
-                    data: supplyData,
-                    borderColor: '#48bb78',
-                    backgroundColor: 'rgba(72, 187, 120, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.1)'
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    }
-                }
-            },
-            elements: {
-                point: {
-                    radius: 4,
-                    hoverRadius: 6
-                }
-            }
-        }
-    });
-}
+// Chart Functions (Enhanced version is above)
 
 function updateChart() {
     const period = document.getElementById('chartPeriod').value;
