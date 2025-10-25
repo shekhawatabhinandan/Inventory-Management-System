@@ -4,6 +4,8 @@ let currentRole = null;
 let stockData = [];
 let activityLog = [];
 let orderChart = null;
+let stockChart = null;
+let currentStockView = 'list';
 let sessionStartTime = null;
 let sessionTimer = null;
 let securityCode = null;
@@ -503,6 +505,11 @@ function applyTheme(theme) {
     if (orderChart) {
         updateChartTheme(orderChart, theme);
     }
+    
+    // Update stock chart theme if it exists
+    if (stockChart) {
+        updateStockChartTheme(stockChart, theme);
+    }
 }
 
 function updateChartTheme(chart, theme) {
@@ -522,6 +529,33 @@ function updateChartTheme(chart, theme) {
             dataset.backgroundColor = isDark ? 'rgba(72, 187, 120, 0.1)' : 'rgba(72, 187, 120, 0.1)';
         }
     });
+    
+    chart.update();
+}
+
+function updateStockChartTheme(chart, theme) {
+    const isDark = theme === 'dark';
+    
+    // Update legend colors
+    if (chart.options.plugins && chart.options.plugins.legend) {
+        chart.options.plugins.legend.labels.color = isDark ? '#ffffff' : '#333333';
+    }
+    
+    // Update border colors for datasets
+    chart.data.datasets.forEach(dataset => {
+        dataset.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.9)';
+    });
+    
+    // Update scales if they exist (for bar chart)
+    if (chart.options.scales) {
+        if (chart.options.scales.y) {
+            chart.options.scales.y.grid.color = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            chart.options.scales.y.ticks.color = isDark ? '#b0b0b0' : '#666666';
+        }
+        if (chart.options.scales.x) {
+            chart.options.scales.x.ticks.color = isDark ? '#b0b0b0' : '#666666';
+        }
+    }
     
     chart.update();
 }
@@ -639,6 +673,182 @@ function loadStockStatus() {
         
         stockItemsContainer.appendChild(stockItem);
     });
+    
+    // Update chart if it exists
+    if (currentStockView !== 'list' && stockChart) {
+        updateStockChart(currentStockView);
+    }
+}
+
+// Stock Chart Functions
+function switchStockView(view) {
+    currentStockView = view;
+    
+    // Update button states
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-view') === view) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Show/hide views
+    const stockItems = document.getElementById('stockItems');
+    const stockChartContainer = document.getElementById('stockChartContainer');
+    
+    if (view === 'list') {
+        stockItems.style.display = 'flex';
+        stockChartContainer.style.display = 'none';
+    } else {
+        stockItems.style.display = 'none';
+        stockChartContainer.style.display = 'block';
+        
+        // Create or update chart
+        if (stockChart) {
+            updateStockChart(view);
+        } else {
+            createStockChart(view);
+        }
+    }
+}
+
+function createStockChart(view) {
+    const ctx = document.getElementById('stockChart').getContext('2d');
+    const isDark = currentTheme === 'dark';
+    
+    const data = stockData.map(item => item.quantity);
+    const labels = stockData.map(item => item.name);
+    const backgroundColors = [
+        'rgba(102, 126, 234, 0.8)',
+        'rgba(237, 137, 54, 0.8)',
+        'rgba(72, 187, 120, 0.8)',
+        'rgba(245, 101, 101, 0.8)',
+        'rgba(66, 153, 225, 0.8)',
+        'rgba(139, 92, 246, 0.8)',
+        'rgba(236, 72, 153, 0.8)',
+        'rgba(34, 197, 94, 0.8)'
+    ];
+    
+    const chartType = view === 'pie' ? 'pie' : 'bar';
+    
+    stockChart = new Chart(ctx, {
+        type: chartType,
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Stock Quantity',
+                data: data,
+                backgroundColor: backgroundColors.slice(0, labels.length),
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.9)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: isDark ? '#ffffff' : '#333333',
+                        padding: 15,
+                        font: {
+                            size: 11
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += context.parsed + ' units';
+                            return label;
+                        }
+                    }
+                }
+            },
+            ...(view === 'bar' && {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                        },
+                        ticks: {
+                            color: isDark ? '#b0b0b0' : '#666666'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: isDark ? '#b0b0b0' : '#666666'
+                        }
+                    }
+                }
+            })
+        }
+    });
+}
+
+function updateStockChart(view) {
+    if (!stockChart) {
+        createStockChart(view);
+        return;
+    }
+    
+    const data = stockData.map(item => item.quantity);
+    const labels = stockData.map(item => item.name);
+    const backgroundColors = [
+        'rgba(102, 126, 234, 0.8)',
+        'rgba(237, 137, 54, 0.8)',
+        'rgba(72, 187, 120, 0.8)',
+        'rgba(245, 101, 101, 0.8)',
+        'rgba(66, 153, 225, 0.8)',
+        'rgba(139, 92, 246, 0.8)',
+        'rgba(236, 72, 153, 0.8)',
+        'rgba(34, 197, 94, 0.8)'
+    ];
+    
+    stockChart.data.labels = labels;
+    stockChart.data.datasets[0].data = data;
+    stockChart.data.datasets[0].backgroundColor = backgroundColors.slice(0, labels.length);
+    
+    // Change chart type if needed
+    const chartType = view === 'pie' ? 'pie' : 'bar';
+    stockChart.config.type = chartType;
+    
+    // Update scales configuration for bar chart
+    if (chartType === 'bar') {
+        const isDark = currentTheme === 'dark';
+        stockChart.options.scales = {
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                },
+                ticks: {
+                    color: isDark ? '#b0b0b0' : '#666666'
+                }
+            },
+            x: {
+                grid: {
+                    display: false
+                },
+                ticks: {
+                    color: isDark ? '#b0b0b0' : '#666666'
+                }
+            }
+        };
+    } else {
+        delete stockChart.options.scales;
+    }
+    
+    stockChart.update();
 }
 
 function loadInventoryTable() {

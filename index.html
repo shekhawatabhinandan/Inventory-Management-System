@@ -17,7 +17,7 @@
                 <div class="logo-container">
                     <i class="fas fa-warehouse"></i>
                     <div class="logo-text">
-                        <h1>InventoryPro</h1>
+                        <h1>Inventory Management </h1>
                         <span class="tagline">Smart Inventory Management</span>
                     </div>
                 </div>
@@ -249,6 +249,17 @@
                     <div class="card-header">
                         <h2><i class="fas fa-chart-bar"></i> Live Stock Status</h2>
                         <div class="card-actions">
+                            <div class="chart-view-toggle">
+                                <button class="view-btn active" data-view="list" onclick="switchStockView('list')" title="List View">
+                                    <i class="fas fa-list"></i>
+                                </button>
+                                <button class="view-btn" data-view="pie" onclick="switchStockView('pie')" title="Pie Chart">
+                                    <i class="fas fa-chart-pie"></i>
+                                </button>
+                                <button class="view-btn" data-view="bar" onclick="switchStockView('bar')" title="Bar Chart">
+                                    <i class="fas fa-chart-bar"></i>
+                                </button>
+                            </div>
                             <button class="refresh-btn" onclick="refreshStockStatus()">
                                 <i class="fas fa-sync-alt"></i>
                             </button>
@@ -257,6 +268,9 @@
                     <div class="card-content">
                         <div class="stock-items" id="stockItems">
                             <!-- Stock items will be dynamically loaded -->
+                        </div>
+                        <div class="stock-chart-container" id="stockChartContainer" style="display: none;">
+                            <canvas id="stockChart"></canvas>
                         </div>
                     </div>
                 </div>

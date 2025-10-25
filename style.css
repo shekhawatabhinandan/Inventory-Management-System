@@ -748,6 +748,33 @@ body {
 .card-actions {
     display: flex;
     gap: 10px;
+    align-items: center;
+}
+
+.chart-view-toggle {
+    display: flex;
+    gap: 5px;
+}
+
+.view-btn {
+    padding: 8px 12px;
+    background: #e2e8f0;
+    color: #4a5568;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.view-btn:hover {
+    background: #cbd5e0;
+    transform: translateY(-1px);
+}
+
+.view-btn.active {
+    background: #667eea;
+    color: white;
 }
 
 .refresh-btn, .clear-btn {
@@ -818,6 +845,12 @@ body {
 .stock-quantity {
     font-weight: 700;
     font-size: 1.2rem;
+}
+
+.stock-chart-container {
+    position: relative;
+    height: 350px;
+    width: 100%;
 }
 
 /* Stock Entry Form */
@@ -1592,6 +1625,20 @@ body {
     color: var(--accent-color);
 }
 
+[data-theme="dark"] .view-btn {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .view-btn:hover {
+    background: var(--bg-secondary);
+}
+
+[data-theme="dark"] .view-btn.active {
+    background: var(--accent-color);
+    color: white;
+}
+
 [data-theme="dark"] .refresh-btn,
 [data-theme="dark"] .clear-btn {
     background: var(--accent-color);
@@ -1626,6 +1673,10 @@ body {
 
 [data-theme="dark"] .stock-info p {
     color: var(--text-muted);
+}
+
+[data-theme="dark"] .stock-quantity {
+    color: white;
 }
 
 [data-theme="dark"] .form-group label {
